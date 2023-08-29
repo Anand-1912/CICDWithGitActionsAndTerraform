@@ -7,7 +7,7 @@ resource "azurerm_storage_account" "sa" {
   account_replication_type  = "LRS"
   enable_https_traffic_only = true  
 
-  depends_on = [ azurerm_resource_group.rg ]
+  # depends_on = [ azurerm_resource_group.rg ]
 }
 
 # Create input container
