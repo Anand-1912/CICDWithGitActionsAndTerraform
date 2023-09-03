@@ -1,0 +1,237 @@
+name: CICD
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Target environment"
+        default: "all"
+        required: true
+        type: choice
+        options:
+          - all
+          - dev
+          - sys
+          - uat
+          - prod
+permissions:
+  id-token: write
+  contents: read
+env:
+  ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+  ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+  SUPERAPP_TF_STATE_STORE: ${{ vars.SUPERAPP_TF_STATE_STORE }}
+  AZURE_RESOURCE_GROUP_NAME: ${{ vars.AZURE_RESOURCE_GROUP_NAME }}
+
+jobs:
+  print-inputs:
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - run: |
+          echo "target: ${{ github.event.inputs.target }}"
+  create-storage-dev:
+    if: github.event.inputs.target == 'dev'
+    runs-on: ubuntu-latest
+    environment: development
+    env:
+      ENVIRONMENT: sys
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Azure Login
+        uses: azure/login@v1
+
+        with:
+          creds: '{"clientId":"${{ env.ARM_CLIENT_ID }}","clientSecret":"${{ env.ARM_CLIENT_SECRET }}","subscriptionId":"${{ env.ARM_SUBSCRIPTION_ID }}","tenantId":"${{ env.ARM_TENANT_ID }}"}'
+          enable-AzPSSession: true
+
+      - name: Az Show
+        run: |
+          az group list
+
+      - name: Setup terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Terraform Init
+        id: init
+        run: |
+          cd terraform
+          terraform init \
+          -backend-config="resource_group_name=${{ env.AZURE_RESOURCE_GROUP_NAME }}" \
+          -backend-config="storage_account_name=${{ env.SUPERAPP_TF_STATE_STORE }}"
+
+      - name: "Terraform Validate"
+        id: validate
+        run: |
+          cd terraform
+          terraform validate
+
+      - name: "Terraform Plan"
+        id: plan
+        run: |
+          cd terraform
+          terraform plan
+
+      - name: "Terraform Apply"
+        id: apply
+        run: |
+          cd terraform
+          terraform apply -auto-approve
+
+  create-storage-sys:
+    if: github.event.inputs.target == 'sys'
+    runs-on: ubuntu-latest
+    environment: SystemTest
+    env:
+      ENVIRONMENT: sys
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: '{"clientId":"${{ env.ARM_CLIENT_ID }}","clientSecret":"${{ env.ARM_CLIENT_SECRET }}","subscriptionId":"${{ env.ARM_SUBSCRIPTION_ID }}","tenantId":"${{ env.ARM_TENANT_ID }}"}'
+          enable-AzPSSession: true
+
+      - name: Az Show
+        run: |
+          az group list
+
+      - name: Setup terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Terraform Init
+        id: init
+        run: |
+          cd terraform
+          terraform init \
+          -backend-config="resource_group_name=${{ env.AZURE_RESOURCE_GROUP_NAME }}" \
+          -backend-config="storage_account_name=${{ env.SUPERAPP_TF_STATE_STORE }}"
+
+      - name: "Terraform Validate"
+        id: validate
+        run: |
+          cd terraform
+          terraform validate
+
+      - name: "Terraform Plan"
+        id: plan
+        run: |
+          cd terraform
+          terraform plan -var "environment=${{ env.ENVIRONMENT }}"
+
+      - name: "Terraform Apply"
+        id: apply
+        run: |
+          cd terraform
+          terraform apply -var "environment=${{ env.ENVIRONMENT }}" -auto-approve
+
+  create-storage-uat:
+    if: github.event.inputs.target == 'uat'
+    runs-on: ubuntu-latest
+    environment: uat
+    env:
+      ENVIRONMENT: uat
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: '{"clientId":"${{ env.ARM_CLIENT_ID }}","clientSecret":"${{ env.ARM_CLIENT_SECRET }}","subscriptionId":"${{ env.ARM_SUBSCRIPTION_ID }}","tenantId":"${{ env.ARM_TENANT_ID }}"}'
+          enable-AzPSSession: true
+
+      - name: Az Show
+        run: |
+          az group list
+
+      - name: Setup terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Terraform Init
+        id: init
+        run: |
+          cd terraform
+          terraform init \
+          -backend-config="resource_group_name=${{ env.AZURE_RESOURCE_GROUP_NAME }}" \
+          -backend-config="storage_account_name=${{ env.SUPERAPP_TF_STATE_STORE }}"
+
+      - name: "Terraform Validate"
+        id: validate
+        run: |
+          cd terraform
+          terraform validate
+
+      - name: "Terraform Plan"
+        id: plan
+        run: |
+          cd terraform
+          terraform plan -var "environment=${{ env.ENVIRONMENT }}"
+
+      - name: "Terraform Apply"
+        id: apply
+        run: |
+          cd terraform
+          terraform apply -var "environment=${{ env.ENVIRONMENT }}" -auto-approve
+
+  create-storage-prod:
+    if: github.event.inputs.target == 'prod'
+    runs-on: ubuntu-latest
+    environment: Production
+    env:
+      ENVIRONMENT: prod
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: '{"clientId":"${{ env.ARM_CLIENT_ID }}","clientSecret":"${{ env.ARM_CLIENT_SECRET }}","subscriptionId":"${{ env.ARM_SUBSCRIPTION_ID }}","tenantId":"${{ env.ARM_TENANT_ID }}"}'
+          enable-AzPSSession: true
+
+      - name: Az Show
+        run: |
+          az provider list --query "[?registrationState=='NotRegistered']" --output table
+
+      - name: Setup terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Terraform Init
+        id: init
+        run: |
+          cd terraform
+          terraform init \
+          -backend-config="resource_group_name=${{ env.AZURE_RESOURCE_GROUP_NAME }}" \
+          -backend-config="storage_account_name=${{ env.SUPERAPP_TF_STATE_STORE }}"
+
+      - name: "Terraform Validate"
+        id: validate
+        run: |
+          cd terraform
+          terraform validate
+
+      - name: "Terraform Plan"
+        id: plan
+        run: |
+          cd terraform
+          terraform plan -var "environment=${{ env.ENVIRONMENT }}"
+
+      - name: "Terraform Apply"
+        id: apply
+        run: |
+          cd terraform
+          terraform apply -var "environment=${{ env.ENVIRONMENT }}" -auto-approve
