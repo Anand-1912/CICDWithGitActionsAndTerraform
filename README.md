@@ -79,3 +79,23 @@ This is a footnote[^1]
   # Header
   This is the copy for the collapsed text.
 </details>
+
+**Indicators**
+
+> [!NOTE]
+> A note
+
+> [!IMPORTANT]
+> important
+
+> [!WARNING]
+> warning
+
+**Graphs**
+
+```mermaid
+graph TD;
+    A-->B;
+    A-->C;
+```
+
