@@ -69,3 +69,13 @@ This is a footnote[^1]
 - [x] Apple
 - [ ] Samsung
 - [ ] Motorola
+
+
+**Details**
+
+<details>
+  <summary>collapsed</summary>
+
+  # Header
+  This is the copy for the collapsed text.
+</details>
